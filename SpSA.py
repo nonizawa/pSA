@@ -11,7 +11,7 @@ import pandas as pd
 
 starttime = time.time()
 
-# アニーリング関数（出力はアニーリング後のスピン配列とアニーリング時間）
+# Annealing function (returns the spin array after annealing and the annealing time)
 def annealing(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, spin_vector, Itanh_ini, async_prop):
     Itanh = Itanh_ini
     start_time = time.time()
@@ -30,19 +30,20 @@ def annealing(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, spin_vector, Ita
     annealing_time = end_time - start_time
     return (spin_vector, annealing_time)
 
-#カット数計算関数
+# Function to calculate cut number
 def cut_calculate(G_matrix, spin_vector):
     spin_vector_reshaped = np.reshape(spin_vector, (len(spin_vector),)) # spin_vectorを1次元配列に変換
     upper_triangle = np.triu_indices(len(spin_vector), k=1) # 上三角行列のインデックスを取得
     cut_val = np.sum(G_matrix[upper_triangle] * (1 - np.outer(spin_vector_reshaped, spin_vector_reshaped)[upper_triangle])) # 上三角行列の要素のみを計算してcut_valを算出
     return int(cut_val/2)
 
-#エネルギー計算関数
+# Function to calculate energy
 def energy_calculate(J_matrix, spin_vector):
         Jm_tmp = np.dot(J_matrix, spin_vector)
        # hm_tmp = np.dot(h_vector, spin_vector.T)
         return -np.sum(Jm_tmp * spin_vector) / 2 #- hm_tmp
 
+# Create adjacency matrix for the graph
 def get_graph(vertex, lines):
     G_matrix = np.zeros((vertex, vertex), int)
     
@@ -60,7 +61,8 @@ def get_graph(vertex, lines):
     # Adding the matrix to its transpose to make it symmetric
     G_matrix = G_matrix + G_matrix.T
     return G_matrix
- 
+
+# Read and process the file
 def read_and_process_file(file_path):
 
     name = [None] * 5
@@ -83,7 +85,7 @@ def read_and_process_file(file_path):
 
     return vertex, G_matrix, J_matrix, best_known, name 
 
-# コマンドライン引数のパーサーを作成
+# Create a command-line argument parser
 parser = argparse.ArgumentParser()
 parser.add_argument('--stall_prop', type=float, default=0.5, help='stalled prop値')
 parser.add_argument('--graph_file', type=str, default='graph/G1.txt', help='グラフファイルのパス')
@@ -94,11 +96,11 @@ parser.add_argument('--gamma', type=float, default=0.1, help="gamma (default: 0.
 parser.add_argument('--delta', type=float, default=10, help="delta (default: 10)")
 args = parser.parse_args()
 
-# mean_rangeとgraph_fileの値を取得
+# Retrieve values for stall_prop and graph_file
 async_prop = np.float32(1-args.stall_prop)
 vertex, G_matrix, J_matrix, best_known, name = read_and_process_file(args.graph_file)
 
-# ------ SC-SA パラメータ ------ #
+# ------ Graph structure ------ #
 mean_each = []
 std_each = []
 for j in range(vertex):
@@ -108,6 +110,7 @@ sigma = np.mean(std_each)
 mean = np.mean(mean_each)
 print('mean = ',mean, 'sigma = ',sigma)
 
+# ------ SpSA parameters ------ #
 min_cycle = np.int32(args.cycle)
 trial  = np.int32(args.trial)
 Mshot = np.int32(1)
@@ -120,7 +123,7 @@ tau    = np.int32(1)
 beta   = np.float32((I0_min/I0_max)**(tau/(min_cycle-1)))
 max_cycle = math.ceil((math.log10(I0_min/I0_max)/math.log10(beta))) * tau
 
-# ------ 実行プログラム ------
+# ------ Execution Program ------ #
 print('trials:', trial)
 print("Min Cycles :", min_cycle)
 print('beta:', beta)
@@ -157,7 +160,7 @@ print('Time average :', time_average)
 
 print("Total time:", time.time()-starttime)
 
-# 出力するデータをリストで定義する
+# Output file
 data = [
     name[0],name[1],name[2],name[3],name[4], args.stall_prop, gamma, delta, cut_average, cut_max, cut_min, 100*cut_average/best_known, 100*cut_max/best_known, time_average]
 

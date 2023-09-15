@@ -30,12 +30,12 @@ cd pSA
 
 ### TApSA (Time Averaged pSA)
 
-To run the SSA algorithm on a single instance, use the sa.py script. For example:
+To run the TApSA algorithm on a single instance, use the TApSA.py script. For example:
 
 ```sh
-python ssa.py --file_path graph/G1.txt --cylce 1000 --trial 100 --tau 1 --param 1
+python ssa.py --graph_file graph/G1.txt --cylce 1000 --trial 100 --tau 1 --mean_range 4
 ```
-You can find the simulation results in ./result/.　Result***.csv includes simulation retsuls, such as mean cut values and simulation time. Cut***.csv includes cut values for all trials.
+You can find the simulation results in ./result/.　Result***.csv includes simulation retsuls, such as mean cut values and simulation time. 
 
 Here ia the options.
 
