@@ -10,64 +10,34 @@ import os
 import matplotlib.pyplot as plt
 import argparse
 import pandas as pd
-
-type = 0
+from collections import deque
 
 # Annealing function (returns the spin array after annealing and the annealing time)
-def annealing_mean(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, spin_vector, Itanh_ini, mean_range):
+def annealing_mean(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, spin_vector, Itanh_ini, mean_range, rand_type):
     Itanh = Itanh_ini
     start_time = time.time()
     cycle = 0
 
-    if type == 0:
-        ### 1st version 
-        spin_vector_list = []
-        print('1st version')
-    else:
-        ### 2nd version
-        spin_vectors = np.zeros((vertex, mean_range))  # 初期化
-        #print(spin_vectors.shape)
-        index = 0
-        print('2nd version')
+    I_vector_list = deque()
 
     for i in range(Mshot): 
         I0 = I0_min
         while I0 <= I0_max:
             for i in range(tau):
-                #print('cycle = ', cycle)
-                if cycle >= mean_range:
-                    if type == 0:
-                        ### 1st version
-                        #print('Delete spin:',spin_vector_list.pop(0))
-                        spin_vector_list.pop(0)
-                        spin_vector_list.append(spin_vector)
-                        #print('Add spin:',spin_vector_list)
-                        spin_vector = np.mean(spin_vector_list, axis=0)
-                        #print('spin_vector:',spin_vector)
-                    else:
-                        ### 2nd version
-                        spin_vectors = np.delete(spin_vectors, 0, axis=1)
-                        #print(spin_vectors.shape)
-                        spin_vectors = np.column_stack((spin_vectors,spin_vector))
-                        #print(spin_vectors.shape)
-                        spin_vector = np.mean(spin_vectors,axis=1).reshape((-1,1))
-                        #print(spin_vector.shape)  
-                else:
-                    if type == 0:
-                        ### 1st version
-                        spin_vector_list.append(spin_vector)
-                        #print('Initialize spin:',spin_vector_list)
-                        #print('spin_vector:',spin_vector)
-                    else:
-                        ### 2nd version
-                        spin_vectors[:, index] = spin_vector.reshape(-1)
-                        index += 1
-                        #print(index,spin_vector.shape)
-                        #print(index,spin_vectors.shape)
-                rnd = (1.0 + 1.0) * np.random.rand(vertex,1) - 1.0
-                #rnd = np.random.randint(0,2,(vertex, 1)) #0と1のランダムノイズ
-                #rnd = np.where(rnd == 0, -1, 1) #-1と1のノイズに変換
+                if rand_type == 0:
+                    rnd = 2.0 * np.random.rand(vertex,1) - 1.0
+                elif rand_type == 1:
+                    rnd = 1/10 * np.random.poisson(10, (vertex,1)) - 1.0
                 I_vector = np.dot(J_matrix, spin_vector)
+                if cycle >= mean_range:
+                    # 先頭から要素を削除
+                    if I_vector_list:
+                        I_vector_list.popleft()
+                    # 末尾に要素を追加
+                    I_vector_list.append(I_vector)
+                else:
+                    I_vector_list.append(I_vector)             
+                I_vector = np.mean(I_vector_list, axis=0)
                 Itanh = np.tanh(I0*I_vector) + nrnd * rnd
                 #Itanh = fun_Itanh(Itanh, I_vector, I0)  
                 spin_vector = np.where(Itanh>=0, 1, -1)
@@ -141,6 +111,7 @@ parser.add_argument('--trial', type=int, default=100, help="Number of trials (de
 parser.add_argument('--tau', type=int, default=1, help="tau (default: 1)")
 parser.add_argument('--gamma', type=float, default=0.1, help="gamma (default: 0.1)")
 parser.add_argument('--delta', type=float, default=10, help="delta (default: 10)")
+parser.add_argument('--rand', type=float, default=0, help="rand (default: 0)")
 args = parser.parse_args()
 
 # Retrieve values for mean_range and graph_file
@@ -164,6 +135,7 @@ Mshot = np.int32(1)
 nrnd = np.float32(1)
 gamma = np.float32(args.gamma)
 delta = np.float32(args.delta)
+rand_type = args.rand
 I0_min = np.float32(gamma/sigma)
 I0_max = np.float32(delta/sigma)
 tau    = np.int32(args.tau)
@@ -185,7 +157,7 @@ cut_list = []
 for k in range(trial):
     ini_spin_vector = np.random.randint(0,2,(vertex, 1))    #0と1のランダムスピン配列初期値
     ini_spin_vector = np.where(ini_spin_vector == 0, -1, 1) #-1と1のスピン配列に変換
-    (last_spin_vector, annealing_time) = annealing_mean(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, ini_spin_vector, Itanh_ini,mean_range)
+    (last_spin_vector, annealing_time) = annealing_mean(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, ini_spin_vector, Itanh_ini,mean_range,rand_type)
     cut_val = cut_calculate(G_matrix, last_spin_vector)
     min_energy = energy_calculate(J_matrix, last_spin_vector)
     cut_sum += cut_val
@@ -207,7 +179,7 @@ print('Time average :', time_average)
 
 # Output file
 data = [
-    name[0],name[1],name[2],name[3],name[4], mean_range, gamma, delta, cut_average, cut_max, cut_min, 100*cut_average/best_known, 100*cut_max/best_known, time_average]
+    name[0],name[1],name[2],name[3],name[4], mean_range, gamma, delta, rand_type, cut_average, cut_max, cut_min, 100*cut_average/best_known, 100*cut_max/best_known, time_average]
 
 if os.path.isfile("./result/result_TApSA.csv"): # "result.csv" ファイルが存在する場合
     with open("./result/result_TApSA.csv", 'a', newline='') as csvfile:
@@ -216,7 +188,7 @@ if os.path.isfile("./result/result_TApSA.csv"): # "result.csv" ファイルが�
 else: # "result_cpu.csv" ファイルが存在しない場合
     with open("./result/result_TApSA.csv", 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['graph','#node', 'Weights','Structure','Best-known value',	'mean_range','gamma','delta','mean','max','min','mean%','max%','sim_time'])
+        writer.writerow(['graph','#node', 'Weights','Structure','Best-known value',	'mean_range','gamma','delta','rand_type','mean','max','min','mean%','max%','sim_time'])
         writer.writerow(data)
 
 

@@ -12,14 +12,17 @@ import pandas as pd
 starttime = time.time()
 
 # Annealing function (returns the spin array after annealing and the annealing time)
-def annealing(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, spin_vector, Itanh_ini, async_prop):
+def annealing(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, spin_vector, Itanh_ini, async_prop, rand_type):
     Itanh = Itanh_ini
     start_time = time.time()
     for i in range(Mshot): 
         I0 = I0_min
         while I0 <= I0_max:
             for i in range(tau):
-                rnd = (1.0 + 1.0) * np.random.rand(vertex,1) - 1.0
+                if rand_type == 0:
+                    rnd = 2.0 * np.random.rand(vertex,1) - 1.0
+                elif rand_type == 1:
+                    rnd = 1/10 * np.random.poisson(10, (vertex,1)) - 1.0
                 I_vector = np.dot(J_matrix, spin_vector)
                 Itanh = np.tanh(I0*I_vector) + nrnd * rnd
                 random_indices = np.random.choice(vertex, size=np.int32(vertex*async_prop), replace=False)
@@ -94,6 +97,7 @@ parser.add_argument('--trial', type=int, default=100, help="Number of trials (de
 parser.add_argument('--tau', type=int, default=1, help="tau (default: 1)")
 parser.add_argument('--gamma', type=float, default=0.1, help="gamma (default: 0.1)")
 parser.add_argument('--delta', type=float, default=10, help="delta (default: 10)")
+parser.add_argument('--rand', type=float, default=0, help="rand (default: 0)")
 args = parser.parse_args()
 
 # Retrieve values for stall_prop and graph_file
@@ -117,6 +121,7 @@ Mshot = np.int32(1)
 nrnd   = np.float32(1)
 delta = np.float32(args.delta)
 gamma = np.float32(args.gamma)
+rand_type = args.rand
 I0_min = np.float32(gamma/sigma)
 I0_max = np.float32(delta/sigma)
 tau    = np.int32(1)
@@ -139,7 +144,7 @@ cut_list = []
 for k in range(trial):
     ini_spin_vector = np.random.randint(0,2,(vertex, 1))    #0と1のランダムスピン配列初期値
     ini_spin_vector = np.where(ini_spin_vector == 0, -1, 1) #-1と1のスピン配列に変換
-    (last_spin_vector, annealing_time) = annealing(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, ini_spin_vector, Itanh_ini, async_prop)
+    (last_spin_vector, annealing_time) = annealing(tau, I0_min, I0_max, beta, nrnd, Mshot, J_matrix, ini_spin_vector, Itanh_ini, async_prop, rand_type)
     cut_val = cut_calculate(G_matrix, last_spin_vector)
     min_energy = energy_calculate(J_matrix, last_spin_vector)
     cut_sum += cut_val
@@ -162,7 +167,7 @@ print("Total time:", time.time()-starttime)
 
 # Output file
 data = [
-    name[0],name[1],name[2],name[3],name[4], args.stall_prop, gamma, delta, cut_average, cut_max, cut_min, 100*cut_average/best_known, 100*cut_max/best_known, time_average]
+    name[0],name[1],name[2],name[3],name[4], args.stall_prop, gamma, delta, rand_type, cut_average, cut_max, cut_min, 100*cut_average/best_known, 100*cut_max/best_known, time_average]
 
 if os.path.isfile("./result/result_SpSA.csv"): # "result.csv" ファイルが存在する場合
     with open("./result/result_SpSA.csv", 'a', newline='') as csvfile:
