@@ -23,8 +23,10 @@ cd pSA
 
 - `TApSA.py`: This is the Python script that runs the TApSA for MAX-CUT algorithm.
 - `SpSA.py`: This is the Python script that runs the SpSA for MAX-CUT algorithm.
-- `./graph/`: This directory contains the dataset of graphs used for evaluation.
+- `./graph/`: This directory contains the MAX-CUT dataset of graphs used for evaluation.
 - `./result/`: This directory contains the evaluation results generated using simulation.
+- `pSA.py`: This is the Python script that runs the pSA for MAX-CUT algorithm.
+- `./graph_GI/`: This directory contains the graph isomorphism (GI) dataset of graphs used for evaluation.
 
 ## Single Run
 
@@ -47,11 +49,13 @@ Here ia the options.
 
 - `--tau`:  A pseudo inverse temperature is increased every tau cycle
 
+- `--rand`:  A type of random signal for p-bits: 0 for uniform and 1 for poisson
+
 - `--mean_range`: The size of time window for averaing 
 
 ### SpSA (Stalled pSA)
 
-Here is a python program for SSAU that can run, like SSA.
+Here is a python program for SpSA that can run, like TApSA.
 - `SpSA.py`
 
 It has the same options as TApSA except the folling one:
